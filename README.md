@@ -5,8 +5,7 @@ Welcome to my GitHub repository! This repository serves as a collection of exerc
 ## Repository Structure 📂
 
 The repository is organized into folders, each representing a day of practice or a specific exercise. Below is an overview of the current structure:
-
-# Day 1: Design and Verification of a D Flip Flop 🔄
+- Day 1: Design and Verification of a D Flip Flop 🔄
 
 ## Future Exercises 🔮
 
