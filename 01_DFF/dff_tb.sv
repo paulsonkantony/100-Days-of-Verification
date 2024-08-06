@@ -1,10 +1,10 @@
-// Code your testbench here
-// or browse Examples
 class transaction;
   
+  //All signals excluding global signals
   randc bit [7:0] din;
   bit [7:0] dout;
   
+  //Deep Copy
   function transaction copy();
     copy = new();
     copy.din = this.din;
@@ -46,13 +46,13 @@ class generator;
     transaction tr;
     dff_model dff_ref;
 
-    mailbox #(transaction) mbx;
-    mailbox #(dff_model) mbxref;
+    mailbox #(transaction) mbx; //Send data to driver
+    mailbox #(dff_model) mbxref; //Send reference object to scoreboard
 
-    event sconext;
-    event done;
+    event sconext; //Scoreboard Iteration completed
+    event done; //Requested number of stimulus sent
 
-    int count;
+    int count; //Requested number of stimulus
 
     function new(mailbox #(transaction) mbx, mailbox #(dff_model) mbxref);
         this.mbx = mbx;
@@ -62,8 +62,8 @@ class generator;
     endfunction
 
     task run();
-        repeat(count) begin
-            assert(tr.randomize()) else $error("[GEN] Randomizaion Failed");
+        repeat(count) begin //Repeat until requested number of stimulus done
+            assert(tr.randomize()) else $error("[GEN] Randomization Failed");
             tr.display("GEN");
             mbx.put(tr.copy());
             dff_ref.update(tr.din);
@@ -78,9 +78,11 @@ endclass
 class driver;
 
     virtual dff_if vif;
+    //Virtual Interface is needed because classes are dynamic objects and interfaces are static objects
+    //In OOP, we cannot refer static objects from dynamic objects
     transaction tr;
-    mailbox #(transaction) mbx;
-    event monitor_sample;
+    mailbox #(transaction) mbx; //Storing data from generator
+    event monitor_sample; //Sync with monitor
 
     function new(mailbox #(transaction) mbx);
         this.mbx = mbx;
@@ -97,7 +99,7 @@ class driver;
     task run();
         forever begin
             mbx.get(tr);
-            vif.din <= tr.din;
+            vif.din <= tr.din; //Non Blocking because procedural block
             @(posedge vif.clk);
             tr.display("DRV");
             ->monitor_sample;
@@ -122,8 +124,10 @@ class monitor;
     task run();
         tr = new();
         forever begin
-            //@(monitor_sample);
-            @(posedge vif.clk);
+            @(monitor_sample);
+            //@(posedge vif.clk);
+            //Non Blocking Assignment simply calculates the RHS at the beginning of the procedural block
+            //https://electronics.stackexchange.com/questions/583402/why-does-non-blocking-assignment-in-verilog-seem-like-a-misnomer
             tr.din = vif.din;
             @(posedge vif.clk);
             tr.dout = vif.dout;

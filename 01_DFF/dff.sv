@@ -1,7 +1,7 @@
 module dff(
     input wire clk, rst,
     input [7:0] din,
-    output reg dout
+    output reg [7:0] dout
 );
 
     always@(posedge clk or negedge rst) begin
