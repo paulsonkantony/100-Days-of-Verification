@@ -1,0 +1,134 @@
+// Code your design here
+module uart_rx_top(
+    input clk, rst, baud_pulse, rx, parity_enable, sticky_parity, even_parity_select,
+    input [1:0] wls,
+    output reg push, 
+    output reg parity_error, frame_error, break_error
+);
+
+    typedef enum logic [7:0] {
+        idle,
+        start,
+        read,
+        parity,
+        stop
+    } state_type;
+
+    state_type state = idle;
+
+    reg rx_reg = 1'b1; //Line has to be pulled low to start reception
+    wire fall_edge;
+
+    always@(posedge clk) rx_reg <= rx;
+
+    assign fall_edge = rx_reg;
+
+    reg [2:0] bit_count = 0; //Max bit count is 8
+    reg [3:0] count = 0; //Maximum 16 pulses
+    reg [7:0] dout = 0;
+    reg parity_error_reg;
+
+    always@(posedge clk, posedge rst) begin
+        if(rst) begin
+            state <= idle;
+            push <= 1'b0;
+            parity_error <= 1'b0;
+            frame_error <= 1'b0;
+            break_error <= 1'b0;
+            bit_count <= 8'h00;
+        end
+        else begin
+            push <= 1'b0;
+            if (baud_pulse) begin
+                case(state)
+                    idle: begin
+                        if(!fall_edge) begin
+                            state <= start;
+                            count <= 5'd15;
+                        end
+                        else state <= idle;
+                    end
+                    start: begin
+                        count <= count -1;
+                        if(count == 5'd7) begin //Sampling at the 8th edge for 16x oversampling
+                            if(rx==1'b1) begin // Start bit should be 0, error in transmission
+                                state <= idle;
+                                count <= 5'd15;
+                            end
+                            else state <= start;
+                        end
+                        else if(count == 0) begin
+                            state <= read;
+                            count <= 5'd15;
+                            bit_count <= {1'b1, wls}; // {MSB, LSB}
+                        end
+                    end
+                    read: begin
+                        count <= count -1;
+                        if(count == 5'd7) begin
+                            case(wls)
+                                2'b00: dout <= {3'b000, rx, dout[4:1]}; //Right shift
+                                2'b01: dout <= {2'b00 , rx, dout[5:1]};
+                                2'b10: dout <= {1'b0  , rx, dout[6:1]};
+                                2'b11: dout <= {        rx, dout[7:1]};
+                            endcase
+                            state <= read;
+                        end
+                        else if(count == 0) begin
+                            if(bit_count == 0) begin
+
+                                case({sticky_parity, even_parity_select})
+                                    2'b00: parity_error_reg <= ~^{rx, dout}; //ODD parity, error if it is EVEN
+                                    2'b01: parity_error_reg <= ^{rx, dout}; //EVEN parity
+                                    2'b10: parity_error_reg <= ~rx;     //Sticky parity, so parity should be 1, 0 gives error
+                                    2'b10: parity_error_reg <= rx;     //Sticky parity, so parity should be 0
+                                endcase
+
+                                if(parity_enable == 1'b1) begin
+                                    state <= parity;
+                                    count <= 5'd15;
+                                end
+                                else begin
+                                    state <= stop;
+                                    count <= 5'd15;
+                                end
+                            end
+                            else begin
+                                bit_count <= bit_count -1;
+                                state <= read;
+                                count <= 5'd15;
+                            end
+                        end
+                    end
+                    parity: begin
+                        count <= count -1;
+                        if(count == 5'd7) begin
+                            parity_error <= parity_error_reg;
+                            state <= parity;
+                        end
+                        else if(count == 0) begin
+                            state <= stop;
+                            count <= 5'd15;
+                        end
+                    end
+
+                    stop: begin
+                        count <= count -1;
+                        if(count == 5'd7) begin
+                            frame_error <= ~rx; //Stop Bit should be 1
+                            push <= 1'b1;
+                            state <= stop;
+                        end
+                        else if(count == 0) begin
+                            state <= idle;
+                            count <= 5'd15;
+                        end
+                    end
+                    default: ;
+                endcase
+            end
+        end
+    end
+endmodule
+
+

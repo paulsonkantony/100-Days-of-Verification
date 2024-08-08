@@ -1,0 +1,78 @@
+module uar_tx_tb;
+
+    //Inputs
+    reg clk, rst, baud_pulse, rx, parity_enable, sticky_parity, even_parity_select;
+    reg [1:0] wls;
+
+    //Outputs
+    wire push, parity_error, frame_error, break_error;
+
+    uart_rx_top dut(
+        clk, rst, baud_pulse, rx, parity_enable, sticky_parity, even_parity_select, wls,
+        push, parity_error, frame_error, break_error
+    );
+
+    initial begin
+        clk <= 1'b0;
+        rst <= 1'b0;
+        baud_pulse <= 1'b0;
+        rx <= 1'b1;
+
+        sticky_parity <= 1'b0;
+        even_parity_select <= 1'b0; //Odd Parity
+        parity_enable <= 1'b1;
+        wls = 2'b11; //8 bits
+    end
+
+    always #5 clk <= ~clk; //100MHz
+
+    integer count = 4; 
+    //Baud Rate = 9600 => 100Mz/9600 = 10416
+
+    //Baud Pulse Generator
+    always@(posedge clk) begin
+        if(rst == 0) begin
+            if(count != 0) begin
+                count <= count - 1;
+                baud_pulse <= 1'b0;
+            end
+            else begin
+                count <= 4;
+                baud_pulse <= 1'b1;
+            end
+        end
+    end
+
+    reg [7:0] rx_reg = 8'ha4; //Input Data
+
+    initial begin
+        rst = 1'b1;
+        repeat(5) @(posedge clk);
+        rst = 1'b0;
+
+        rx = 1'b0;
+        repeat(16) @(posedge baud_pulse); // 16 cycles for stop bit
+
+        for(int i=0; i<8; ++i) begin //Send each bit at 16th pulse
+            rx = rx_reg[i];
+            repeat(16) @(posedge baud_pulse);
+        end
+
+        rx = ~^rx_reg; //Send ODD parity of current data
+        repeat(16) @(posedge baud_pulse);
+
+        rx = 1'b1; //Send STOP bit
+        repeat(16) @(posedge baud_pulse);
+    end
+
+
+    initial begin
+        $dumpfile("dump.vcd");
+        $dumpvars;
+    end
+
+    //initial $monitor("[MON] :: din : %0b :: tx : %0b :: pop : %0b :: sreg_empty : %0b", din, tx, pop, sreg_empty);
+
+    initial #10000 $finish();
+
+endmodule
