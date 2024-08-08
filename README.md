@@ -7,6 +7,7 @@ Welcome to my GitHub repository! This repository serves as a collection of exerc
 The repository is organized into folders, each representing a day of practice or a specific exercise. Below is an overview of the current structure. You can follow the respective links to try the code on your own:
 - [Day 1: Design and Verification of a D Flip Flop](https://www.edaplayground.com/x/bB_P)
 - [Day 2: Design and Verification of a FIFO](https://www.edaplayground.com/x/gnjr)
+- [Day 3: Design and Verification of UART 16550 Transmitter Logic](https://www.edaplayground.com/x/R2iz)
 
 ## Future Exercises 🔮
 
