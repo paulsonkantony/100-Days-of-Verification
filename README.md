@@ -8,6 +8,7 @@ The repository is organized into folders, each representing a day of practice or
 - [Day 1: Design and Verification of a D Flip Flop](https://www.edaplayground.com/x/bB_P)
 - [Day 2: Design and Verification of a FIFO](https://www.edaplayground.com/x/gnjr)
 - [Day 3: Design and Verification of UART 16550 Transmitter Logic](https://www.edaplayground.com/x/R2iz)
+- [Day 4: Design and Verification of UART 16550 Receiver Logic](https://www.edaplayground.com/x/7h3j)
 
 ## Future Exercises 🔮
 
